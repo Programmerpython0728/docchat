@@ -1,0 +1,18 @@
+[project]
+name = "docchat-backend"
+version = "0.1.0"
+description = "DocChat — AI-powered document Q&A backend"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "aiofiles>=23.2",
+    "asyncpg>=0.31.0",
+    "redis>=5.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "ipython>=8.0",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
