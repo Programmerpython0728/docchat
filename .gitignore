@@ -1,38 +1,10 @@
-# Python
 __pycache__/
-*.py[cod]
 *.so
 .Python
 *.egg-info/
-.venv/
-venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
-# Environment
-.env
-.env.local
-*.env
 
-# IDE
-.vscode/
-.idea/
-*.swp
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Node (kelajak uchun)
-node_modules/
-.next/
-out/
-
-# Logs
-*.log
-
-# Data
-*.db
-*.sqlite
-uploads/
