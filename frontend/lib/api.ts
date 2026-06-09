@@ -50,6 +50,16 @@ export async function apiFetch<T>(
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: "Xato" }));
+    // Pydantic 422 validation: detail — bu obyektlar massivi
+    if (Array.isArray(error.detail)) {
+      const msg = error.detail
+        .map((e: { loc?: (string | number)[]; msg?: string }) => {
+          const field = e.loc?.slice(1).join(".") || "input";
+          return `${field}: ${e.msg?.replace(/^Value error, /, "")}`;
+        })
+        .join("; ");
+      throw new Error(msg || `HTTP ${res.status}`);
+    }
     throw new Error(error.detail || `HTTP ${res.status}`);
   }
 

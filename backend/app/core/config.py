@@ -70,17 +70,18 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = Field(default=60 * 24 * 7, ge=1)  # 7 kun
 
     # === LLM ===
-    llm_provider: Literal["openai", "ollama", "anthropic"] = "openai"
+    llm_provider: Literal["openai", "ollama", "anthropic", "gemini"] = "gemini"
     openai_api_key: str | None = None
     anthropic_api_key: str | None = None
+    gemini_api_key: str | None = None
     ollama_base_url: str = "http://localhost:11434"
     ollama_chat_model: str = "llama3.2:3b"
     ollama_embed_model: str = "nomic-embed-text"
 
     # Embedding
-    embedding_provider: Literal["openai", "local"] = "openai"
-    embedding_model: str = "text-embedding-3-small"
-    embedding_dimension: int = 1536
+    embedding_provider: Literal["openai", "local", "gemini"] = "gemini"
+    embedding_model: str = "gemini-embedding-001"
+    embedding_dimension: int = 768   # Gemini text-embedding-004 = 768, Ollama nomic-embed-text = 768
 
     # === File uploads ===
     upload_max_size_mb: int = Field(default=50, ge=1, le=500)

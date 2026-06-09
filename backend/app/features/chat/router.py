@@ -215,19 +215,33 @@ async def _stream_rag_response(
     full_response = ""
     sources_data = None
 
-    async with get_db_context() as db:
-        rag = RAGService(db)
-        async for event in rag.generate_stream(
-            query=prompt,
-            user_id=user_id,
-            document_ids=document_ids,
-            use_hybrid=use_hybrid,
-        ):
-            await websocket.send_json(event)
-            if event["type"] == "token":
-                full_response += event["content"]
-            elif event["type"] == "sources":
-                sources_data = event["sources"]
+    try:
+        async with get_db_context() as db:
+            rag = RAGService(db)
+            async for event in rag.generate_stream(
+                query=prompt,
+                user_id=user_id,
+                document_ids=document_ids,
+                use_hybrid=use_hybrid,
+            ):
+                await websocket.send_json(event)
+                if event["type"] == "token":
+                    full_response += event["content"]
+                elif event["type"] == "sources":
+                    sources_data = event["sources"]
+    except Exception as e:
+        # Frontend "..." da osilib qolmasligi uchun xatoni yuboramiz va done bilan yakunlaymiz
+        err_msg = str(e)
+        if "UNAVAILABLE" in err_msg or "503" in err_msg:
+            user_msg = "Gemini modeli hozir band. Bir necha sekund kuting va qayta urinib ko'ring."
+        elif "RESOURCE_EXHAUSTED" in err_msg or "429" in err_msg:
+            user_msg = "API chegaragacha yetdingiz. Bir oz kuting."
+        else:
+            user_msg = f"Xato: {err_msg[:200]}"
+        logger.exception(f"RAG stream xato: {e}")
+        await websocket.send_json({"type": "token", "content": user_msg})
+        await websocket.send_json({"type": "done"})
+        return
 
     # DB ga saqlash (chat_id bo'lsa)
     if chat_id:

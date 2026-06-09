@@ -3,6 +3,7 @@ from functools import lru_cache
 
 from app.core.config import get_settings
 from app.core.llm.base import LLMProvider
+from app.core.llm.gemini_provider import GeminiProvider
 from app.core.llm.ollama_provider import OllamaProvider
 from app.core.llm.openai_provider import OpenAIProvider
 
@@ -15,4 +16,6 @@ def get_llm_provider() -> LLMProvider:
         return OpenAIProvider()
     elif settings.llm_provider == "ollama":
         return OllamaProvider()
+    elif settings.llm_provider == "gemini":
+        return GeminiProvider()
     raise ValueError(f"Noma'lum provider: {settings.llm_provider}")

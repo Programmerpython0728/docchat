@@ -24,6 +24,7 @@ dependencies = [
     "openai>=2.38.0",
     "pypdf>=6.12.2",
     "python-docx>=1.2.0",
+    "google-genai>=2.8.0",
 ]
 
 [tool.uv]

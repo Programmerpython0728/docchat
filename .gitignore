@@ -1,10 +1,44 @@
+# Python
 __pycache__/
+*.py[cod]
 *.so
 .Python
 *.egg-info/
+.venv/
+venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
+# Environment / Secrets — HECH QACHON commit qilmang
+.env
+.env.local
+.env.*.local
+*.env
 
+# IDE
+.vscode/
+.idea/
+*.swp
 
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Logs
+*.log
+
+# Data / uploads
+*.db
+*.sqlite
+uploads/
+
+# Docker
+*.pid
