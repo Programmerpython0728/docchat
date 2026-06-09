@@ -16,15 +16,20 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.core.arq_pool import close_arq_pool, init_arq_pool
 from app.core.config import get_settings
+from app.core.database import close_engine, init_engine
 from app.core.exceptions import DocChatException
+from app.core.http_client import close_http_client, init_http_client
 from app.core.logging import setup_logging
 from app.core.middleware import RequestIDMiddleware, TimingMiddleware
+from app.core.redis_client import close_redis, init_redis
 
 # Routerlarni import qilamiz
 from app.features.auth.router import router as auth_router
 from app.features.chat.router import router as chat_router
 from app.features.documents.router import router as documents_router
+from app.features.rag.router import router as rag_router
 
 logger = logging.getLogger(__name__)
 
@@ -48,15 +53,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info(f"   Environment: {settings.app_env}")
     logger.info(f"   Debug: {settings.debug}")
 
-    # TODO 4-kun: DB engine init
-    # TODO 7-kun: Redis client init
-    # TODO 8-kun: LLM client init
+    init_engine()
+    logger.info("DB engine tayyor")
+
+    init_redis()
+    logger.info("Redis client tayyor")
+
+    init_http_client()
+    logger.info("HTTP client tayyor")
+
+    await init_arq_pool()
+    logger.info("arq Redis pool tayyor")
 
     yield  # <-- bu yerda app ishlaydi
 
     # === Shutdown ===
     logger.info(f"<<< {settings.app_name} to'xtatilmoqda")
-    # TODO: resurslarni yopish
+    await close_arq_pool()
+    await close_http_client()
+    await close_redis()
+    await close_engine()
 
 
 def create_app() -> FastAPI:
@@ -141,6 +157,11 @@ def create_app() -> FastAPI:
         documents_router,
         prefix=f"{settings.api_v1_prefix}/documents",
         tags=["documents"],
+    )
+    app.include_router(
+        rag_router,
+        prefix=f"{settings.api_v1_prefix}/rag",
+        tags=["rag"],
     )
 
     return app

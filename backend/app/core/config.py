@@ -74,6 +74,8 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     anthropic_api_key: str | None = None
     ollama_base_url: str = "http://localhost:11434"
+    ollama_chat_model: str = "llama3.2:3b"
+    ollama_embed_model: str = "nomic-embed-text"
 
     # Embedding
     embedding_provider: Literal["openai", "local"] = "openai"

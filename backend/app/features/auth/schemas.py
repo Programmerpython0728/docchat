@@ -45,17 +45,27 @@ class UserResponse(UserBase):
 
     id: int
     is_active: bool
+    is_superuser: bool = False
     created_at: datetime
 
 
 class TokenResponse(BaseModel):
     """JWT token javobi."""
     access_token: str
+    refresh_token: str | None = None
     token_type: str = "bearer"
-    expires_in: int = Field(..., description="Token amal qilish vaqti (sekundlarda)")
+    expires_in: int = Field(..., description="Access token muddati (sekund)")
 
 
 class TokenPayload(BaseModel):
-    """JWT ichidagi ma'lumotlar (decode qilingandan keyin)."""
-    sub: str  # user_id
-    exp: int  # expiration timestamp
+    """JWT payload — decode qilingandan keyin."""
+    sub: str           # user_id
+    exp: int
+    iat: int
+    type: str          # access | refresh
+    role: str | None = None
+
+
+class RefreshTokenRequest(BaseModel):
+    """Refresh token bilan yangi access token so'rovi."""
+    refresh_token: str

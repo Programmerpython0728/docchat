@@ -14,11 +14,20 @@ dependencies = [
     "pydantic-settings>=2.0",
     "python-multipart>=0.0.29",
     "email-validator>=2.3.0",
+    "sqlalchemy>=2.0.50",
+    "alembic>=1.18.4",
+    "pgvector>=0.4.2",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt==4.0.1",
+    "python-jose[cryptography]>=3.3.0",
+    "arq>=0.28.0",
+    "openai>=2.38.0",
+    "pypdf>=6.12.2",
+    "python-docx>=1.2.0",
 ]
 
 [tool.uv]
 dev-dependencies = [
-    "httpx>=0.28.1",
     "ipython>=8.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",

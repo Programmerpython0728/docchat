@@ -1,12 +1,19 @@
 """Chat endpoints"""
+import asyncio
+import json
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, status
+from jose import JWTError
 
+from app.core.database import get_db_context
 from app.core.exceptions import ChatNotFoundError
+from app.core.security import decode_token
 from app.features.auth.dependencies import get_current_active_user
 from app.features.auth.schemas import UserResponse
+from app.features.chat.connection_manager import manager
+from app.features.chat.repository import MessageRepository
 from app.features.chat.schemas import (
     ChatCreate,
     ChatDetailResponse,
@@ -15,6 +22,7 @@ from app.features.chat.schemas import (
     MessageResponse,
     MessageRole,
 )
+from app.features.rag.service import RAGService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -133,3 +141,105 @@ async def send_message(
                 "Haqiqiy RAG javobi 9-kunda paydo bo'ladi!",
         created_at=datetime.now(),
     )
+
+
+# ============================================================
+# WebSocket — real-time chat streaming
+# ============================================================
+@router.websocket("/ws")
+async def chat_websocket(
+    websocket: WebSocket,
+    token: str = Query(...),  # WS da header qiyin, query orqali token
+):
+    """
+    Real-time chat WebSocket.
+
+    Ulanish: ws://localhost:8000/api/v1/chat/ws?token=<jwt>
+
+    Protokol:
+    - Client yuboradi: {"type": "message", "content": "savol"}
+    - Server yuboradi: {"type": "token", "content": "so'z"}
+    - Tugaganda: {"type": "done"}
+    """
+    # Token tekshirish (WS da Depends ishlamaydi, qo'lda)
+    try:
+        payload = decode_token(token)
+        if payload.get("type") != "access":
+            raise JWTError("Access token kerak")
+        user_id = int(payload["sub"])
+    except (JWTError, KeyError, ValueError):
+        await websocket.close(code=4001, reason="Invalid token")
+        return
+
+    await manager.connect(websocket, user_id)
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+
+            if data.get("type") != "message":
+                continue
+
+            prompt = data.get("content", "")
+            chat_id = data.get("chat_id")
+            document_ids = data.get("document_ids")
+            use_hybrid = data.get("hybrid", False)
+            logger.info(f"WS message: user={user_id}, len={len(prompt)}, hybrid={use_hybrid}")
+
+            llm_task = asyncio.create_task(
+                _stream_rag_response(
+                    websocket, prompt, user_id, chat_id, document_ids, use_hybrid
+                )
+            )
+
+            try:
+                await llm_task
+            except WebSocketDisconnect:
+                llm_task.cancel()
+                raise
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user_id)
+        logger.info(f"User {user_id} disconnected")
+
+
+async def _stream_rag_response(
+    websocket: WebSocket,
+    prompt: str,
+    user_id: int,
+    chat_id: int | None,
+    document_ids: list[int] | None,
+    use_hybrid: bool = False,
+):
+    """To'liq RAG streaming + DB ga saqlash."""
+    full_response = ""
+    sources_data = None
+
+    async with get_db_context() as db:
+        rag = RAGService(db)
+        async for event in rag.generate_stream(
+            query=prompt,
+            user_id=user_id,
+            document_ids=document_ids,
+            use_hybrid=use_hybrid,
+        ):
+            await websocket.send_json(event)
+            if event["type"] == "token":
+                full_response += event["content"]
+            elif event["type"] == "sources":
+                sources_data = event["sources"]
+
+    # DB ga saqlash (chat_id bo'lsa)
+    if chat_id:
+        async with get_db_context() as db:
+            msg_repo = MessageRepository(db)
+            await msg_repo.create(
+                chat_id=chat_id, role=MessageRole.USER, content=prompt,
+            )
+            await msg_repo.create(
+                chat_id=chat_id,
+                role=MessageRole.ASSISTANT,
+                content=full_response,
+                sources=json.dumps(sources_data) if sources_data else None,
+            )
+            await db.commit()
