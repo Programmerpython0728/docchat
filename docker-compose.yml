@@ -44,6 +44,9 @@ services:
       DATABASE_URL: postgresql+asyncpg://dasturchi_05:571632@postgres:5432/docchat
       REDIS_URL: redis://redis:6379/0
       OLLAMA_BASE_URL: http://host.docker.internal:11434
+      # CORS — frontend domeni
+      # Lokal: localhost va 127.0.0.1 ikkalasi. Production: PUBLIC_ORIGIN (https://docchat.uz) ham.
+      CORS_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000","${PUBLIC_ORIGIN:-http://localhost:3000}"]'
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -79,13 +82,17 @@ services:
     command: arq app.worker.WorkerSettings
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # MUHIM: Next.js NEXT_PUBLIC_* o'zgaruvchilarni BUILD paytida bundle ichiga biriktiradi.
+        # Lokal: bo'sh bo'lsa http://localhost:8000/api/v1 ishlatiladi.
+        # Production: API_URL=https://docchat.uz/api/v1 (nginx reverse proxy orqali).
+        NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:8000/api/v1}
     container_name: docchat-frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
     depends_on:
       - backend
 
